@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
+  BookTemplate,
   FileText,
   MessageSquare,
   GraduationCap,
@@ -19,11 +20,13 @@ import {
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/templates', label: 'Templates', icon: BookTemplate },
   { href: '/contracts', label: 'Contracts Hub', icon: FileText },
   { href: '/negotiation', label: 'AI Simulator', icon: MessageSquare },
   { href: '/workshop', label: 'Workshop', icon: GraduationCap },
   { href: '/analytics', label: 'Analytics', icon: BarChart3 },
 ];
+
 
 const secondaryNavItems = [
   { href: '/profile', label: 'Profile', icon: User },

@@ -19,6 +19,9 @@ import {
   UploadCloud,
   GraduationCap,
   Play,
+  BookTemplate,
+  Clock,
+  CheckCircle2,
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -32,14 +35,21 @@ export default function DashboardPage() {
             <span>Welcome back, Alex Morgan</span>
           </div>
           <h1 className="text-2xl lg:text-3xl font-black text-white tracking-tight">
-            AI Contract Negotiation Dashboard
+            AI Contract Negotiation & Template Hub
           </h1>
           <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
-            You have 1 active negotiation in progress and 7 risky clauses requiring review.
+            Manage reusable templates, generate independent multi-party contracts, and simulate stateful AI negotiations.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 z-10">
+          <Link
+            href="/templates"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:bg-slate-800 text-white text-xs font-extrabold transition-all"
+          >
+            <BookTemplate className="w-4 h-4 text-accent-violet" />
+            <span>Template Library</span>
+          </Link>
           <Link
             href="/contracts/new"
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white text-xs font-extrabold shadow-md shadow-brand-500/20 transition-all active:scale-[0.98]"
@@ -47,25 +57,18 @@ export default function DashboardPage() {
             <PlusCircle className="w-4 h-4" />
             <span>Create Contract</span>
           </Link>
-          <Link
-            href="/negotiation/1"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-accent-violet hover:bg-accent-violet/90 text-white text-xs font-extrabold shadow-md transition-all active:scale-[0.98]"
-          >
-            <Play className="w-4 h-4" />
-            <span>Continue Negotiation</span>
-          </Link>
         </div>
       </div>
 
-      {/* Top 6 Stat Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <StatCard title="Total Contracts" value="5" change="+2" icon={FileText} iconColor="text-brand-400 bg-brand-500/10" />
-        <StatCard title="Negotiated" value="3" change="+1" icon={MessageSquare} iconColor="text-cyan-400 bg-cyan-500/10" />
-        <StatCard title="Avg Score" value="88/100" change="+4%" icon={Trophy} iconColor="text-amber-400 bg-amber-500/10" />
-        <StatCard title="Risky Clauses" value="7" change="-2" isPositive={false} icon={ShieldAlert} iconColor="text-rose-400 bg-rose-500/10" />
-        <StatCard title="Value Saved" value="₹45,000" change="+₹12k" icon={IndianRupee} iconColor="text-emerald-400 bg-emerald-500/10" />
-        <StatCard title="Active Room" value="1 Deal" subtitle="Senior Engineer" icon={Sparkles} iconColor="text-violet-400 bg-violet-500/10" />
+      {/* Top Stat Cards Grid (Templates, Active, Review, Negotiation, Completed) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <StatCard title="Total Templates" value="4" change="Reusable" icon={BookTemplate} iconColor="text-violet-400 bg-violet-500/10" />
+        <StatCard title="Active Contracts" value="6" change="+2 new" icon={FileText} iconColor="text-brand-400 bg-brand-500/10" />
+        <StatCard title="In Review" value="2" change="Pending" icon={Clock} iconColor="text-amber-400 bg-amber-500/10" />
+        <StatCard title="In Negotiation" value="3" change="Active" icon={MessageSquare} iconColor="text-cyan-400 bg-cyan-500/10" />
+        <StatCard title="Completed" value="5" change="Signed" icon={CheckCircle2} iconColor="text-emerald-400 bg-emerald-500/10" />
       </div>
+
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

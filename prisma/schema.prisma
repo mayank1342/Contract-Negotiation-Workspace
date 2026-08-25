@@ -8,55 +8,100 @@ generator client {
 }
 
 model User {
-  id               String          @id @default(uuid())
-  email            String          @unique
+  id               String               @id @default(uuid())
+  email            String               @unique
   name             String
-  role             String          @default("Freelancer")
-  experience       String          @default("Intermediate")
-  preferredStyle   String          @default("Professional")
-  mainGoal         String          @default("Better contract value & lower risk")
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  role             String               @default("Freelancer")
+  experience       String               @default("Intermediate")
+  preferredStyle   String               @default("Professional")
+  mainGoal         String               @default("Better contract value & lower risk")
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 
   contracts        Contract[]
   negotiations     Negotiation[]
   userProgress     UserProgress?
   badges           Badge[]
   notifications    Notification[]
+  templates        ContractTemplate[]
+  permissions      ContractPermission[]
+  comments         ContractComment[]
+  activities       ContractActivity[]
 }
 
+// ─── Contract Template Library ────────────────────────────────────────────────
+
+model ContractTemplate {
+  id          String             @id @default(uuid())
+  userId      String
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  type        String             @default("General")
+  description String             @default("")
+  content     String             // full template text with {{VARIABLE}} placeholders
+  fileUrl     String?            // path to uploaded file if any
+  fileType    String?            // pdf, docx, txt
+  isPublic    Boolean            @default(false)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  variables   TemplateVariable[]
+  contracts   Contract[]
+}
+
+model TemplateVariable {
+  id          String           @id @default(uuid())
+  templateId  String
+  template    ContractTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  key         String           // e.g. PARTY_1_NAME
+  label       String           // e.g. "Party 1 Name"
+  defaultVal  String           @default("")
+  createdAt   DateTime         @default(now())
+}
+
+// ─── Contract (extended) ──────────────────────────────────────────────────────
+
 model Contract {
-  id              String            @id @default(uuid())
+  id              String               @id @default(uuid())
   userId          String
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateId      String?
+  template        ContractTemplate?    @relation(fields: [templateId], references: [id])
+  sourceType      String               @default("UPLOADED") // UPLOADED | FROM_TEMPLATE | WIZARD
   title           String
-  type            String            @default("Employment Contract")
+  type            String               @default("Employment Contract")
   content         String
-  status          String            @default("DRAFT") // DRAFT, ANALYZED, NEGOTIATING, COMPLETED
-  overallRisk     Int               @default(50)
-  financialRisk   Int               @default(50)
-  terminationRisk Int               @default(50)
-  liabilityRisk   Int               @default(50)
-  paymentRisk     Int               @default(50)
-  ipRisk          Int               @default(50)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  status          String               @default("DRAFT") // DRAFT, IN_REVIEW, NEGOTIATING, COMPLETED
+  overallRisk     Int                  @default(50)
+  financialRisk   Int                  @default(50)
+  terminationRisk Int                  @default(50)
+  liabilityRisk   Int                  @default(50)
+  paymentRisk     Int                  @default(50)
+  ipRisk          Int                  @default(50)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 
   clauses         Clause[]
   riskReports     RiskReport[]
   negotiations    Negotiation[]
   versions        ContractVersion[]
+  parties         ContractParty[]
+  permissions     ContractPermission[]
+  comments        ContractComment[]
+  activities      ContractActivity[]
 }
 
 model ContractVersion {
-  id            String   @id @default(uuid())
-  contractId    String
-  contract      Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  versionNumber Int
-  title         String
-  content       String
-  riskScore     Int      @default(50)
-  createdAt     DateTime @default(now())
+  id                String   @id @default(uuid())
+  contractId        String
+  contract          Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  versionNumber     Int
+  title             String
+  content           String
+  riskScore         Int      @default(50)
+  changedBy         String   @default("") // user name who made the change
+  changeDescription String   @default("") // human description of what changed
+  createdAt         DateTime @default(now())
 }
 
 model Clause {
@@ -263,4 +308,60 @@ model Notification {
   type      String   @default("INFO") // INFO, WARNING, SUCCESS
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+// ─── Multi-Party & Collaboration Models ──────────────────────────────────────
+
+model ContractParty {
+  id         String   @id @default(uuid())
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  name       String
+  email      String   @default("")
+  company    String   @default("")
+  role       String   @default("Party") // Party 1, Party 2, Legal Advisor, etc.
+  order      Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model ContractPermission {
+  id         String   @id @default(uuid())
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       String   @default("VIEWER") // OWNER, EDITOR, REVIEWER, COMMENTER, VIEWER
+  invitedBy  String   @default("")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model ContractComment {
+  id          String            @id @default(uuid())
+  contractId  String
+  contract    Contract          @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId    String?           // null = top-level, set = reply
+  clauseRef   String            @default("") // e.g. "clause:Payment Terms"
+  content     String
+  isResolved  Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  replies     ContractComment[] @relation("CommentReplies")
+  parent      ContractComment?  @relation("CommentReplies", fields: [parentId], references: [id])
+}
+
+model ContractActivity {
+  id          String   @id @default(uuid())
+  contractId  String
+  contract    Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // CONTRACT_CREATED, CONTENT_EDITED, VERSION_CREATED, PARTY_ADDED, COMMENT_ADDED, AI_MODIFY_ACCEPTED, COLLABORATOR_INVITED, STATUS_CHANGED
+  description String
+  metadata    String   @default("{}") // JSON string for extra data
+  createdAt   DateTime @default(now())
 }

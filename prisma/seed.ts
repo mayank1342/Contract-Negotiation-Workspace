@@ -400,7 +400,106 @@ Provider indemnifies Client against all third party claims with unlimited liabil
     },
   });
 
+  // 5. Seed Contract Templates
+  const templateCount = await prisma.contractTemplate.count();
+  if (templateCount === 0) {
+    console.log('Seeding contract templates...');
+    await prisma.contractTemplate.create({
+      data: {
+        userId: demoUser.id,
+        name: 'Standard Mutual NDA Template',
+        type: 'NDA',
+        description: 'Standard two-way Non-Disclosure Agreement for confidential business discussions, proprietary data, and technical IP.',
+        content: `MUTUAL NON-DISCLOSURE AGREEMENT
+
+This Mutual Non-Disclosure Agreement ("Agreement") is entered into on {{CONTRACT_DATE}} by and between:
+
+Disclosing Party / Party 1: {{PARTY_1_NAME}}, representing {{PARTY_1_COMPANY}} ("Party 1")
+Receiving Party / Party 2: {{PARTY_2_NAME}}, representing {{PARTY_2_COMPANY}} ("Party 2")
+
+1. PURPOSE
+The parties wish to explore a potential business relationship concerning joint software development and consulting services.
+
+2. CONFIDENTIAL INFORMATION
+"Confidential Information" refers to any proprietary information, trade secrets, software code, customer data, and financial figures disclosed by either party.
+
+3. OBLIGATIONS OF CONFIDENTIALITY
+Each party agrees:
+a) To hold Confidential Information in strict confidence.
+b) Not to disclose such information to any third party without prior written consent.
+c) To use Confidential Information solely for evaluating the proposed business relationship.
+
+4. TERM & TERMINATION
+This Agreement shall remain in effect for a period of {{TERMINATION_PERIOD}} from the date hereof. The obligations of confidentiality shall survive for {{NOTICE_PERIOD}} following termination.
+
+5. GOVERNING LAW
+This Agreement shall be governed by the laws of India.
+
+IN WITNESS WHEREOF, the parties hereto have executed this Agreement as of the date first written above.
+
+___________________________           ___________________________
+{{PARTY_1_NAME}}                     {{PARTY_2_NAME}}
+{{PARTY_1_COMPANY}}                  {{PARTY_2_COMPANY}}`,
+        variables: {
+          create: [
+            { key: 'PARTY_1_NAME', label: 'Party 1 Name' },
+            { key: 'PARTY_1_COMPANY', label: 'Party 1 Company' },
+            { key: 'PARTY_2_NAME', label: 'Party 2 Name' },
+            { key: 'PARTY_2_COMPANY', label: 'Party 2 Company' },
+            { key: 'CONTRACT_DATE', label: 'Contract Date' },
+            { key: 'TERMINATION_PERIOD', label: 'Term Duration', defaultVal: '2 Years' },
+            { key: 'NOTICE_PERIOD', label: 'Notice Period', defaultVal: '30 Days' },
+          ],
+        },
+      },
+    });
+
+    await prisma.contractTemplate.create({
+      data: {
+        userId: demoUser.id,
+        name: 'Software Developer Employment Agreement',
+        type: 'Employment Contract',
+        description: 'Standard software engineer employment contract covering compensation, notice period, IP assignment, and non-compete terms.',
+        content: `EMPLOYMENT AGREEMENT
+
+This Employment Agreement ("Agreement") is made effective as of {{CONTRACT_DATE}}, between:
+
+Employer: {{PARTY_1_COMPANY}}, represented by {{PARTY_1_NAME}} ("Employer")
+Employee: {{PARTY_2_NAME}} ("Employee")
+
+1. POSITION AND DUTIES
+The Employer agrees to employ {{PARTY_2_NAME}} in the role of {{PARTY_2_ROLE}}. The Employee agrees to perform duties faithfully and to the best of their ability.
+
+2. COMPENSATION & PAYMENT TERMS
+The Employer agrees to pay the Employee compensation in the amount of {{PAYMENT_AMOUNT}}, payable in monthly installments according to standard payroll schedules.
+
+3. TERMINATION & NOTICE PERIOD
+Either party may terminate this agreement by providing {{NOTICE_PERIOD}} written notice. The Employer reserves the right to provide payment in lieu of notice.
+
+4. INTELLECTUAL PROPERTY
+All code, designs, and inventions created by {{PARTY_2_NAME}} during employment shall belong exclusively to {{PARTY_1_COMPANY}}.
+
+EXECUTED BY:
+
+Employer: {{PARTY_1_NAME}} ({{PARTY_1_COMPANY}})
+Employee: {{PARTY_2_NAME}}`,
+        variables: {
+          create: [
+            { key: 'PARTY_1_NAME', label: 'Employer Representative' },
+            { key: 'PARTY_1_COMPANY', label: 'Employer Company' },
+            { key: 'PARTY_2_NAME', label: 'Employee Name' },
+            { key: 'PARTY_2_ROLE', label: 'Job Role', defaultVal: 'Software Engineer' },
+            { key: 'CONTRACT_DATE', label: 'Start Date' },
+            { key: 'PAYMENT_AMOUNT', label: 'Annual Salary', defaultVal: '₹12,00,000 / year' },
+            { key: 'NOTICE_PERIOD', label: 'Notice Period', defaultVal: '30 Days' },
+          ],
+        },
+      },
+    });
+  }
+
   console.log('Database seeding completed successfully!');
+
 }
 
 main()
