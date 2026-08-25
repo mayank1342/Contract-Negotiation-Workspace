@@ -1,0 +1,266 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id               String          @id @default(uuid())
+  email            String          @unique
+  name             String
+  role             String          @default("Freelancer")
+  experience       String          @default("Intermediate")
+  preferredStyle   String          @default("Professional")
+  mainGoal         String          @default("Better contract value & lower risk")
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  contracts        Contract[]
+  negotiations     Negotiation[]
+  userProgress     UserProgress?
+  badges           Badge[]
+  notifications    Notification[]
+}
+
+model Contract {
+  id              String            @id @default(uuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  type            String            @default("Employment Contract")
+  content         String
+  status          String            @default("DRAFT") // DRAFT, ANALYZED, NEGOTIATING, COMPLETED
+  overallRisk     Int               @default(50)
+  financialRisk   Int               @default(50)
+  terminationRisk Int               @default(50)
+  liabilityRisk   Int               @default(50)
+  paymentRisk     Int               @default(50)
+  ipRisk          Int               @default(50)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  clauses         Clause[]
+  riskReports     RiskReport[]
+  negotiations    Negotiation[]
+  versions        ContractVersion[]
+}
+
+model ContractVersion {
+  id            String   @id @default(uuid())
+  contractId    String
+  contract      Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  title         String
+  content       String
+  riskScore     Int      @default(50)
+  createdAt     DateTime @default(now())
+}
+
+model Clause {
+  id                   String   @id @default(uuid())
+  contractId           String
+  contract             Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  title                String
+  text                 String
+  category             String   @default("General")
+  riskLevel            String   @default("MEDIUM") // LOW, MEDIUM, HIGH
+  simpleExplanation    String
+  proExplanation       String
+  studentExplanation   String
+  whyItMatters         String
+  suggestedImprovement String
+  negotiationStrategy  String
+  status               String   @default("REVIEW") // ACCEPTED, FLAGGED, REWRITTEN
+  createdAt            DateTime @default(now())
+}
+
+model RiskReport {
+  id             String   @id @default(uuid())
+  contractId     String
+  contract       Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  riskType       String
+  level          String   // LOW, MEDIUM, HIGH
+  title          String
+  description    String
+  recommendation String
+  createdAt      DateTime @default(now())
+}
+
+model Negotiation {
+  id             String                @id @default(uuid())
+  contractId     String
+  contract       Contract              @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String
+  opponentRole   String                @default("HR Manager")
+  opponentStyle  String                @default("Professional") // Friendly, Professional, Aggressive, Difficult
+  userRole       String                @default("Candidate")
+  goal           String                @default("Maximize total package & fair terms")
+  targetValue    Float                 @default(75000)
+  minimumValue   Float                 @default(65000)
+  batnaValue     Float                 @default(68000)
+  zopaMin        Float                 @default(65000)
+  zopaMax        Float                 @default(85000)
+  status         String                @default("ACTIVE") // ACTIVE, AGREED, FAILED
+  overallScore   Int?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  messages       NegotiationMessage[]
+  offers         Offer[]
+  concessions    Concession[]
+  score          NegotiationScore?
+  replay         NegotiationReplay?
+}
+
+model NegotiationMessage {
+  id            String      @id @default(uuid())
+  negotiationId String
+  negotiation   Negotiation @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+  sender        String      // USER, OPPONENT, SYSTEM, COACH
+  text          String
+  roundNumber   Int         @default(1)
+  createdAt     DateTime    @default(now())
+}
+
+model Offer {
+  id            String      @id @default(uuid())
+  negotiationId String
+  negotiation   Negotiation @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+  roundNumber   Int
+  offerBy       String      // USER, OPPONENT
+  salary        Float
+  duration      String      @default("1 Year")
+  noticePeriod  String      @default("30 Days")
+  paymentTerms  String      @default("30 Days")
+  status        String      @default("PENDING") // PENDING, COUNTERED, ACCEPTED, REJECTED
+  createdAt     DateTime    @default(now())
+}
+
+model Concession {
+  id            String      @id @default(uuid())
+  negotiationId String
+  negotiation   Negotiation @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+  roundNumber   Int
+  madeBy        String      // USER, OPPONENT
+  description   String
+  valueGained   Float       @default(0)
+  valueGiven    Float       @default(0)
+  createdAt     DateTime    @default(now())
+}
+
+model NegotiationScore {
+  id                 String      @id @default(uuid())
+  negotiationId      String      @unique
+  negotiation        Negotiation @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+  overallScore       Int
+  communicationScore Int
+  preparationScore   Int
+  priceScore         Int
+  riskScore          Int
+  concessionScore    Int
+  strategyScore      Int
+  strengths          String      // JSON array string
+  weaknesses         String      // JSON array string
+  valueSaved         Float       @default(0)
+  createdAt          DateTime    @default(now())
+}
+
+model NegotiationReplay {
+  id            String      @id @default(uuid())
+  negotiationId String      @unique
+  negotiation   Negotiation @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+  roundData     String      // JSON string of rounds
+  insights      String      // JSON string of round insights
+  createdAt     DateTime    @default(now())
+}
+
+model Workshop {
+  id          String           @id @default(uuid())
+  title       String
+  description String
+  category    String           @default("Foundations")
+  lessonCount Int              @default(5)
+  createdAt   DateTime         @default(now())
+
+  lessons     WorkshopLesson[]
+}
+
+model WorkshopLesson {
+  id          String             @id @default(uuid())
+  workshopId  String
+  workshop    Workshop           @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  order       Int
+  title       String
+  summary     String
+  theory      String
+  exampleText String
+  createdAt   DateTime           @default(now())
+
+  scenarios   WorkshopScenario[]
+  quizzes     Quiz[]
+}
+
+model WorkshopScenario {
+  id                String         @id @default(uuid())
+  lessonId          String
+  lesson            WorkshopLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  title             String
+  context           String
+  userObjective     String
+  opponentObjective String
+  batna             String
+  target            String
+  minimum           String
+  createdAt         DateTime       @default(now())
+}
+
+model Quiz {
+  id            String         @id @default(uuid())
+  lessonId      String
+  lesson        WorkshopLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  question      String
+  options       String         // JSON array
+  correctAnswer Int
+  explanation   String
+  createdAt     DateTime       @default(now())
+}
+
+model UserProgress {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  xp               Int      @default(0)
+  level            Int      @default(1)
+  currentStreak    Int      @default(1)
+  completedLessons String   @default("[]") // JSON array string
+  completedQuizzes String   @default("[]") // JSON array string
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Badge {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeKey    String
+  title       String
+  description String
+  icon        String   @default("Trophy")
+  unlockedAt  DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("INFO") // INFO, WARNING, SUCCESS
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
