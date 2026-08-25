@@ -1,69 +1,87 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
+export const dynamic = 'force-dynamic';
+import connectMongoDB from '@/lib/db/mongodb';
+import TemplateModel from '@/lib/models/Template';
+import { getSessionUser } from '@/lib/auth';
 
-// GET /api/templates — list templates for a user
+const FALLBACK_USER_ID = 'demo-user-1';
+
+// GET /api/templates — List templates
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const userId = searchParams.get('userId');
-  const search = searchParams.get('search') || '';
-  const type = searchParams.get('type') || '';
+  try {
+    await connectMongoDB();
+    const { searchParams } = new URL(req.url);
+    const sessionUser = await getSessionUser();
+    const userId = sessionUser?.id || searchParams.get('userId') || FALLBACK_USER_ID;
+    const search = searchParams.get('search') || '';
+    const type = searchParams.get('type') || '';
 
-  if (!userId) {
-    return NextResponse.json({ error: 'userId required' }, { status: 400 });
+    const filter: any = { userId };
+    if (search) filter.name = { $regex: search, $options: 'i' };
+    if (type && type !== 'All Types') filter.type = type;
+
+    const templates = await TemplateModel.find(filter).sort({ updatedAt: -1 }).lean();
+
+    return NextResponse.json({
+      templates: templates.map((t: any) => ({
+        id: t._id.toString(),
+        name: t.name,
+        type: t.type,
+        description: t.description,
+        content: t.content,
+        fileUrl: t.fileUrl,
+        fileType: t.fileType,
+        isPublic: t.isPublic,
+        variables: t.variables || [],
+        createdAt: t.createdAt,
+        updatedAt: t.updatedAt,
+      })),
+    });
+  } catch (error: any) {
+    console.error('GET /api/templates error:', error);
+    return NextResponse.json({ error: error.message || 'Failed to fetch templates' }, { status: 500 });
   }
-
-  const where: any = {
-    userId,
-    ...(search ? { name: { contains: search } } : {}),
-    ...(type ? { type } : {}),
-  };
-
-  const templates = await prisma.contractTemplate.findMany({
-    where,
-    include: {
-      variables: true,
-      _count: { select: { contracts: true } },
-    },
-    orderBy: { updatedAt: 'desc' },
-  });
-
-  return NextResponse.json({ templates });
 }
 
-// POST /api/templates — create a template
+// POST /api/templates — Create template
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { userId, name, type, description, content, variables } = body;
+  try {
+    await connectMongoDB();
+    const body = await req.json();
+    const sessionUser = await getSessionUser();
+    const userId = sessionUser?.id || body.userId || FALLBACK_USER_ID;
 
-  if (!userId || !name || !content) {
-    return NextResponse.json({ error: 'userId, name, content required' }, { status: 400 });
-  }
+    const { name, type, description, content, variables } = body;
+    if (!name || !content) {
+      return NextResponse.json({ error: 'Name and content are required' }, { status: 400 });
+    }
 
-  // Detect template variables {{VARIABLE_NAME}} from content
-  const autoDetected = Array.from(new Set(Array.from(content.matchAll(/\{\{([A-Z0-9_]+)\}\}/g)).map((m: any) => m[1])));
+    const autoVars = Array.from(new Set(Array.from(content.matchAll(/\{\{([A-Z0-9_]+)\}\}/g)).map((m: any) => m[1])));
+    const formattedVariables = (variables || autoVars.map((k) => ({ key: k, label: k }))).map((v: any) => ({
+      key: v.key,
+      label: v.label || v.key,
+      defaultVal: v.defaultVal || '',
+    }));
 
-  const varKeys = variables?.map((v: any) => v.key) || autoDetected;
-
-  const template = await prisma.contractTemplate.create({
-    data: {
+    const template = await TemplateModel.create({
       userId,
       name,
       type: type || 'General',
       description: description || '',
       content,
-      variables: {
-        create: varKeys.map((key: string) => {
-          const provided = variables?.find((v: any) => v.key === key);
-          return {
-            key,
-            label: provided?.label || key.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
-            defaultVal: provided?.defaultVal || '',
-          };
-        }),
-      },
-    },
-    include: { variables: true },
-  });
+      variables: formattedVariables,
+    });
 
-  return NextResponse.json({ template }, { status: 201 });
+    return NextResponse.json(
+      {
+        template: {
+          id: template._id.toString(),
+          ...template.toObject(),
+        },
+      },
+      { status: 201 }
+    );
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Failed to create template' }, { status: 500 });
+  }
 }

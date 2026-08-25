@@ -1,72 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
+import connectMongoDB from '@/lib/db/mongodb';
+import TemplateModel from '@/lib/models/Template';
 
 type Params = { params: { id: string } };
 
 // GET /api/templates/:id
 export async function GET(req: NextRequest, { params }: Params) {
-  const template = await prisma.contractTemplate.findUnique({
-    where: { id: params.id },
-    include: {
-      variables: true,
-      _count: { select: { contracts: true } },
-    },
-  });
-  if (!template) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json({ template });
+  try {
+    await connectMongoDB();
+    const template = await TemplateModel.findById(params.id).lean();
+    if (!template) return NextResponse.json({ error: 'Template not found' }, { status: 404 });
+
+    return NextResponse.json({
+      template: {
+        id: (template as any)._id.toString(),
+        ...template,
+      },
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Error fetching template' }, { status: 500 });
+  }
 }
 
 // PUT /api/templates/:id
 export async function PUT(req: NextRequest, { params }: Params) {
-  const body = await req.json();
-  const { userId, name, type, description, content, variables } = body;
+  try {
+    await connectMongoDB();
+    const body = await req.json();
+    const { name, type, description, content, variables } = body;
 
-  const existing = await prisma.contractTemplate.findUnique({ where: { id: params.id } });
-  if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  if (existing.userId !== userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (type !== undefined) updateData.type = type;
+    if (description !== undefined) updateData.description = description;
+    if (content !== undefined) updateData.content = content;
+    if (variables !== undefined) updateData.variables = variables;
 
-  // Re-detect variables
-  const autoDetected = content
-    ? Array.from(new Set(Array.from(content.matchAll(/\{\{([A-Z0-9_]+)\}\}/g)).map((m: any) => m[1])))
-    : [];
+    const updated = await TemplateModel.findByIdAndUpdate(params.id, { $set: updateData }, { new: true }).lean();
+    if (!updated) return NextResponse.json({ error: 'Template not found' }, { status: 404 });
 
-
-  const template = await prisma.contractTemplate.update({
-    where: { id: params.id },
-    data: {
-      ...(name && { name }),
-      ...(type && { type }),
-      ...(description !== undefined && { description }),
-      ...(content && {
-        content,
-        variables: {
-          deleteMany: {},
-          create: autoDetected.map((key: string) => {
-            const provided = variables?.find((v: any) => v.key === key);
-            return {
-              key,
-              label: provided?.label || key.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
-              defaultVal: provided?.defaultVal || '',
-            };
-          }),
-        },
-      }),
-    },
-    include: { variables: true },
-  });
-
-  return NextResponse.json({ template });
+    return NextResponse.json({
+      template: {
+        id: (updated as any)._id.toString(),
+        ...updated,
+      },
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Error updating template' }, { status: 500 });
+  }
 }
 
 // DELETE /api/templates/:id
 export async function DELETE(req: NextRequest, { params }: Params) {
-  const { searchParams } = new URL(req.url);
-  const userId = searchParams.get('userId');
+  try {
+    await connectMongoDB();
+    const deleted = await TemplateModel.findByIdAndDelete(params.id);
+    if (!deleted) return NextResponse.json({ error: 'Template not found' }, { status: 404 });
 
-  const existing = await prisma.contractTemplate.findUnique({ where: { id: params.id } });
-  if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  if (existing.userId !== userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-
-  await prisma.contractTemplate.delete({ where: { id: params.id } });
-  return NextResponse.json({ success: true });
+    return NextResponse.json({ message: 'Template deleted', id: params.id });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Error deleting template' }, { status: 500 });
+  }
 }

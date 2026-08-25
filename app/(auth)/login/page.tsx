@@ -11,9 +11,27 @@ export default function LoginPage() {
   const [email, setEmail] = useState('demo@contractiq.com');
   const [password, setPassword] = useState('password123');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push('/dashboard');
+    setError('');
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Unable to sign in.');
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to sign in.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -42,6 +60,7 @@ export default function LoginPage() {
           </button>
 
           <form onSubmit={handleLogin} className="space-y-4 text-xs font-medium">
+            {error && <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-rose-300">{error}</p>}
             <div className="space-y-1.5">
               <label className="text-slate-300 font-bold">Email Address</label>
               <div className="relative">
@@ -77,9 +96,10 @@ export default function LoginPage() {
 
             <button
               type="submit"
+              disabled={isSubmitting}
               className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-accent-violet hover:from-brand-500 hover:to-accent-violet text-white font-extrabold text-xs shadow-lg shadow-brand-500/30 transition-all active:scale-[0.98]"
             >
-              <span>Sign In to Dashboard</span>
+              <span>{isSubmitting ? 'Signing In...' : 'Sign In to Dashboard'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>

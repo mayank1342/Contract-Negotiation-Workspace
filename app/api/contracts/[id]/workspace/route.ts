@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
+import { getSessionUser } from '@/lib/auth';
 
 type Params = { params: { id: string } };
 
 // GET /api/contracts/:id/workspace — full contract data for workspace view
 export async function GET(req: NextRequest, { params }: Params) {
   const { searchParams } = new URL(req.url);
-  const userId = searchParams.get('userId');
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  const userId = user.id;
 
   const contract = await prisma.contract.findUnique({
     where: { id: params.id },
@@ -40,9 +43,11 @@ export async function GET(req: NextRequest, { params }: Params) {
 // PUT /api/contracts/:id/workspace — update contract content + status
 export async function PUT(req: NextRequest, { params }: Params) {
   const body = await req.json();
-  const { userId, content, status, title } = body;
+  const { content, status, title } = body;
+  const user = await getSessionUser();
 
-  if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
+  if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  const userId = user.id;
 
   const permission = await prisma.contractPermission.findFirst({
     where: { contractId: params.id, userId, role: { in: ['OWNER', 'EDITOR'] } },

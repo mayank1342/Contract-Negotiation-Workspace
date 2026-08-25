@@ -108,6 +108,14 @@ export default function WorkspacePage() {
     );
   };
 
+  const handleExportDOCX = () => {
+    ContractExporterService.exportToDOCX(
+      contract?.title || 'Contract',
+      contract?.content || ''
+    );
+  };
+
+
   if (loading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
@@ -220,6 +228,13 @@ export default function WorkspacePage() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-all"
           >
             <FileDown className="w-3.5 h-3.5 text-amber-400" /> Export PDF
+          </button>
+
+          <button
+            onClick={handleExportDOCX}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-all"
+          >
+            <FileDown className="w-3.5 h-3.5 text-brand-400" /> Export DOCX
           </button>
         </div>
       </div>

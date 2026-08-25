@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { hashPassword } from '../lib/auth';
 
 const prisma = new PrismaClient();
 
@@ -8,9 +9,10 @@ async function main() {
   // 1. Create Demo User
   const demoUser = await prisma.user.upsert({
     where: { email: 'demo@contractiq.com' },
-    update: {},
+    update: { passwordHash: hashPassword('password123') },
     create: {
       email: 'demo@contractiq.com',
+      passwordHash: hashPassword('password123'),
       name: 'Alex Morgan',
       role: 'Freelancer',
       experience: 'Intermediate',

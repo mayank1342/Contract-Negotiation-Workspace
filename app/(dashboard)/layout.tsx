@@ -1,10 +1,15 @@
 import React from 'react';
+import { redirect } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { FloatingAIAssistant } from '@/components/layout/FloatingAIAssistant';
 import { LegalDisclaimerBanner } from '@/components/layout/LegalDisclaimerBanner';
+import { getSessionUser } from '@/lib/auth';
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const user = await getSessionUser();
+  if (!user) redirect('/login');
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-950 text-slate-100">
       {/* Sidebar Navigation */}
